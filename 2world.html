@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>두 개의 세상, 계좌 그리고 지갑</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --surface: #181818;
+      --surface-2: #1f1f1f;
+      --surface-3: #252525;
+      --fg: #ffffff;
+      --muted: #b3b3b3;
+      --near: #cbcbcb;
+      --border: #4d4d4d;
+      --accent: #1ed760;
+      --warn: #ffa42b;
+      --shadow-heavy: rgba(0, 0, 0, 0.5) 0 8px 24px;
+      --shadow-medium: rgba(0, 0, 0, 0.3) 0 8px 8px;
+      --reader-size: 18px;
+      --reader-leading: 1.78;
+      --font-title: SpotifyMixUITitle, CircularSp-Arab, CircularSp-Hebr, CircularSp-Cyrl, CircularSp-Grek, CircularSp-Deva, "Helvetica Neue", Helvetica, Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, "MS Gothic", sans-serif;
+      --font-body: SpotifyMixUI, CircularSp-Arab, CircularSp-Hebr, CircularSp-Cyrl, CircularSp-Grek, CircularSp-Deva, "Helvetica Neue", Helvetica, Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, "MS Gothic", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .progress {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 20;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .progress span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 0 9999px 9999px 0;
+    }
+
+    .reader-shell {
+      min-height: 100vh;
+      padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px);
+      background:
+        radial-gradient(circle at 50% -120px, rgba(255, 255, 255, 0.06), transparent 280px),
+        var(--bg);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 10px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: min(100%, 430px);
+      margin: 0 auto 18px;
+      padding: 8px 8px 8px 14px;
+      border-radius: 9999px;
+      background: rgba(24, 24, 24, 0.92);
+      box-shadow: var(--shadow-heavy);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: var(--near);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .brand-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--near);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+    }
+
+    .controls {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    button {
+      min-width: 36px;
+      min-height: 36px;
+      border: 0;
+      border-radius: 9999px;
+      background: var(--surface-2);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: rgb(18,18,18) 0 1px 0, rgb(124,124,124) 0 0 0 1px inset;
+    }
+
+    button:active { transform: scale(0.96); }
+
+    .article {
+      width: min(100%, 430px);
+      margin: 0 auto;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 2px 26px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .im-logo {
+      display: block;
+      width: 112px;
+      max-width: 38vw;
+      height: auto;
+      object-fit: contain;
+      opacity: 0.92;
+      filter: brightness(1.08);
+    }
+
+    .audience-note {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    .pill {
+      padding: 7px 12px;
+      border-radius: 9999px;
+      background: var(--surface-2);
+      color: var(--fg);
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+
+    header {
+      padding: 18px 0 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--fg);
+      font-family: var(--font-title);
+      font-size: clamp(38px, 11.5vw, 54px);
+      font-weight: 900;
+      line-height: 0.98;
+      letter-spacing: -0.02em;
+    }
+
+    .dek {
+      margin: 18px 0 0;
+      color: var(--near);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .byline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--surface-3);
+      color: var(--fg);
+      font-weight: 900;
+      box-shadow: rgb(18,18,18) 0 1px 0, rgb(124,124,124) 0 0 0 1px inset;
+    }
+
+    .hero {
+      margin: 8px 0 30px;
+    }
+
+    .hero-art {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 52%),
+        linear-gradient(180deg, #252525, #181818);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .hero-art::before,
+    .hero-art::after {
+      content: "";
+      position: absolute;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.16);
+    }
+
+    .hero-art::before {
+      width: 58%;
+      height: 58%;
+      left: -16%;
+      top: 20%;
+    }
+
+    .hero-art::after {
+      width: 44%;
+      height: 44%;
+      right: -10%;
+      top: 13%;
+      box-shadow: inset 0 0 0 16px rgba(255,255,255,0.08);
+    }
+
+    .caption {
+      margin: 9px 2px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .section-label {
+      margin: 34px 0 14px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(179,179,179,0.18);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      color: var(--fg);
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1.16;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      margin: 30px 0 10px;
+      color: var(--fg);
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    p, li {
+      color: var(--near);
+      font-size: var(--reader-size);
+      line-height: var(--reader-leading);
+      letter-spacing: -0.005em;
+    }
+
+    p { margin: 0 0 18px; }
+    strong { color: var(--fg); font-weight: 800; }
+    em { color: var(--fg); font-style: normal; }
+
+    .highlight {
+      margin: 26px 0;
+      padding: 18px 18px 18px 20px;
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--fg);
+      font-size: calc(var(--reader-size) + 1px);
+      font-weight: 800;
+      line-height: 1.62;
+      box-shadow: inset 4px 0 0 var(--accent), var(--shadow-medium);
+    }
+
+    blockquote {
+      margin: 24px 0;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--near);
+      box-shadow: rgb(18,18,18) 0 1px 0, rgb(124,124,124) 0 0 0 1px inset;
+    }
+
+    blockquote p {
+      margin: 0;
+      font-size: calc(var(--reader-size) - 1px);
+    }
+
+    ol, ul {
+      margin: 0 0 22px;
+      padding-left: 24px;
+    }
+
+    li { margin: 8px 0; }
+
+    .toc {
+      margin: 26px 0 30px;
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .toc-title {
+      margin-bottom: 10px;
+      color: var(--fg);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .toc a {
+      display: block;
+      padding: 10px 0;
+      border-top: 1px solid rgba(179,179,179,0.12);
+      color: var(--near);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+
+    .footer {
+      margin: 42px 0 0;
+      padding: 22px 0 10px;
+      border-top: 1px solid rgba(179,179,179,0.18);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .footer-brand .im-logo {
+      width: 96px;
+      max-width: 34vw;
+    }
+
+    .signature {
+      margin-top: 20px;
+      color: var(--fg);
+      font-size: 15px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .resume-toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom) + 18px);
+      z-index: 30;
+      transform: translateX(-50%) translateY(120%);
+      width: min(calc(100% - 32px), 390px);
+      padding: 12px 14px;
+      border-radius: 9999px;
+      background: var(--surface-2);
+      color: var(--fg);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: var(--shadow-heavy);
+      opacity: 0;
+      transition: 220ms ease;
+    }
+
+    .resume-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 360px) {
+      .reader-shell { padding-inline: 14px; }
+      h1 { font-size: 36px; }
+      .brand { letter-spacing: 1px; }
+      button { min-width: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  <main class="reader-shell">
+    <article class="article" data-od-id="body">
+      <nav class="topbar" aria-label="독서 설정">
+        <div class="brand"><span class="brand-dot"></span><span>Reading</span></div>
+        <div class="controls">
+          <button type="button" id="decrease" aria-label="글자 작게">A-</button>
+          <button type="button" id="increase" aria-label="글자 크게">A+</button>
+          <button type="button" id="top" aria-label="맨 위로">↑</button>
+        </div>
+      </nav>
+
+      <div class="masthead">
+        <span>
+          <img class="im-logo" src="mon4pctv-imbank-logo-h-en.jpg.jpg" alt="iM뱅크">
+        </span>
+      </div>
+
+      <header>
+        <h1 data-od-id="headline">두 개의 세상, 계좌 그리고 지갑</h1>
+        <p class="dek">스테이블코인·CBDC 시대, 전통 은행이 알아아 할 12가지</p>
+      </header>
+
+      <figure class="hero" data-od-id="hero">
+        <div class="hero-art" role="img" aria-label="계좌와 지갑이라는 두 개의 디지털 화폐 세계를 표현한 추상 이미지"></div>
+        <figcaption class="caption">같은 화면 위에 놓인 두 숫자: 하나는 은행의 약속, 다른 하나는 토큰이라는 디지털 사물.</figcaption>
+      </figure>
+
+      <section class="toc" aria-label="본문 목차">
+        <a href="#intro">들어가며 - 왜 두 개의 세상인가</a>
+        <a href="#part-1">I. 무엇이 깨지는가</a>
+        <a href="#part-2">II. 무엇이 새로 등장하는가</a>
+        <a href="#part-3">III. 새로운 분류학과 인식의 프레임</a>
+        <a href="#conclusion">결론 - 다시 정의되는 은행</a>
+      </section>
+
+      <section id="intro">
+        <div class="section-label">Opening</div>
+        <h2>들어가며 - 왜 '두 개의 세상'인가</h2>
+        <p>지난 수백 년 동안 은행 앱의 잔고는 단 하나의 의미만을 가졌습니다. 그것은 <em>은행이 고객에게 갚겠다고 약속한 숫자</em>였습니다. 통장, ATM 화면, 모바일 앱 잔고는 표현 매체가 달랐을 뿐 본질은 같았습니다 - 은행에 대한 청구권(claim). 고객이 "내 돈"이라 부르는 것은 사실 은행의 부채였고, 그 부채는 예금자보호제도와 중앙은행의 최종대부자 기능, 그리고 은행감독 체계라는 삼중의 신뢰 장치 위에 얹혀 있었습니다.</p>
+        <p>스테이블코인과 CBDC가 일상에 들어오는 순간, 같은 은행 앱 안에 <em>전혀 다른 종류의 숫자</em>가 함께 등장합니다. 그것은 누구의 약속도 아닌, 토큰 자체로 가치를 운반하는 디지털 사물(bearer instrument)입니다. 잃어버리면 돌려줄 사람이 없고, 압수할 사람이 없으며, 적어도 기술적으로는 누구의 허락 없이 움직입니다.</p>
+        <p class="highlight" data-od-id="pull-quote">계좌의 세상은 약속의 화폐가 사는 곳이고, 지갑의 세상은 사물의 화폐가 사는 곳입니다.</p>
+        <p>이것이 '두 개의 세상'입니다. <strong>계좌의 세상은 약속의 화폐(promise money)가 사는 곳이고, 지갑의 세상은 사물의 화폐(thing money)가 사는 곳입니다.</strong> 두 세상은 같은 화면에 표시되지만, 그 뒤에서 작동하는 회계, 법, 리스크, 신뢰의 메커니즘은 완전히 다릅니다.</p>
+        <p>사실 이 이중성은 오프라인에서는 오랫동안 존재해왔습니다. 주머니 속 현금은 사물의 화폐였고, 통장의 잔고는 약속의 화폐였습니다. 다만 두 세상은 물리적으로 다른 장소에 있었습니다 - 하나는 주머니에, 하나는 은행에. 디지털 화폐 시대의 진짜 사건은 <em>두 세상이 새로 생긴다는 것</em>이 아니라, <strong>이미 있던 두 세상이 처음으로 같은 화면 위에 나란히 놓인다는 것</strong>입니다.</p>
+        <p>오랜 은행 경력을 가진 분들에게 가장 어려운 일은, 이 변화가 <em>기능의 추가</em>가 아니라 <em>제도의 분기</em>라는 사실을 받아들이는 일입니다. 본 글은 그 인식 전환을 위해 반드시 알아야 할 12가지 항목을 정리합니다. 앞의 네 가지는 전통적 은행 원장의 근간이 어떻게 흔들리는지를, 다음 다섯 가지는 그 균열에서 새로 나타나는 사실들을, 마지막 세 가지는 화폐 분류의 차이와 우리 자신의 인식 프레임을 다룹니다.</p>
+      </section>
+
+      <section id="part-1">
+        <div class="section-label">Part I</div>
+        <h2>I. 무엇이 깨지는가 - 전통 은행 원장의 네 가지 전제</h2>
+        <h3>1. 원장(Ledger)의 단일성이 깨집니다</h3>
+        <p>은행은 역사적으로 <em>원장을 독점적으로 쓰는 기관</em>으로 정의되어 왔습니다. 메디치 가문의 복식부기 이래 5세기 동안, 은행의 본질은 "기록할 권한과 그 기록을 보증할 책임"이 한 몸으로 묶여 있는 것이었습니다.</p>
+        <p>지갑의 세상에서는 이 전제가 무너집니다. 토큰은 외부 블록체인의 원장에 존재하고, 은행 앱은 그 원장을 <em>조회해서 보여주는</em> 뷰어일 뿐입니다. 자기 장부가 아닌 외부 장부에 적힌 숫자를, 자기 화면에 자기 고객 자산으로 표시해야 합니다. 이것은 회계 역사상 한 번도 없던 일입니다 - 이중장부도 신탁장부도 아닌, <em>권한 없는 외부 장부의 표시</em>입니다.</p>
+        <p>가장 먼저 인식해야 할 것은 <em>통제권의 비대칭</em>입니다. 은행은 표시할 수 있지만 변경할 수 없고, 보여줄 수 있지만 보증할 수 없습니다. 이 새로운 비대칭성을 회계기준, 내부통제, 분쟁대응 절차에 어떻게 반영할 것인가 - 이것이 디지털 자산 시대 은행 운영의 첫 번째 과제입니다.</p>
+
+        <h3>2. 부채-자산 이분법이 깨집니다</h3>
+        <p>전통적 은행 회계에서 모든 항목은 결국 부채(예금, 차입)이거나 자산(대출, 보유증권)입니다. 모든 숫자는 누군가에 대한 청구권 관계로 환원됩니다.</p>
+        <p>수탁 중인 고객의 토큰은 이 이분법 어디에도 들어가지 않습니다. 은행은 그것을 빌린 적이 없으니 부채가 아니고, 고객의 것이니 자산도 아닙니다. 회계상 <em>부외 보관물(off-balance-sheet custody asset)</em>에 가깝지만, 문제는 이것이 부수적 항목이 아니라 <em>주력 상품</em>이 된다는 점입니다.</p>
+        <p>이는 자기자본비율, 유동성커버리지비율(LCR), 순안정자금조달비율(NSFR) 같은 자본·유동성 규제 지표의 분모와 분자를 모두 흔듭니다. 부외 항목이 일상적으로 움직이는 상황은 바젤 III가 가정한 세계가 아닙니다. 한국채택국제회계기준(K-IFRS) 역시 IFRS IC가 2019년에 가상자산을 무형자산 또는 재고자산으로 본 해석을 두고 있을 뿐, <em>수탁 디지털자산</em>에 대한 명확한 분류 기준은 아직 없습니다.</p>
+        <blockquote><p>던져야 할 질문은 결국 이것입니다 - 부외 항목이 주력 상품이 되는 회계 구조에서, 우리 은행의 재무제표는 무엇을 의미하는가.</p></blockquote>
+
+        <h3>3. 가역성(Reversibility)이 사라집니다</h3>
+        <p>이 변화는 운영부서와 컴플라이언스 부서에 가장 큰 충격을 줍니다. 보이스피싱 피해 입금 차단, 착오송금 반환, 직원 오조작 정정, 법원 명령에 따른 지급정지 - 지금까지 은행업의 거의 모든 분쟁대응 절차는 "되돌릴 수 있다"는 전제 위에 짜여 있었습니다.</p>
+        <p>온체인 거래는 그게 안 됩니다. 트랜잭션이 블록에 포함되는 순간 결제 종국성(settlement finality)이 발생하고, 어떤 권한자도 이를 되돌릴 수 없습니다. 그러면 <em>지급정지·환수·분쟁조정</em>이라는 은행업의 핵심 보호장치들이 작동하지 않는 영역이 같은 앱 안에 생깁니다.</p>
+        <p>금융소비자보호법이 지키고자 하는 핵심 가치 - 권리구제 가능성 - 가 이 영역에서는 기술적으로 보장되지 않습니다. 이를 <em>비대칭적 소비자보호 환경</em>으로 인식해야 합니다. 같은 고객, 같은 앱, 같은 금융사고지만, <em>어느 화면에서 일어났느냐에 따라</em> 구제 가능성이 달라집니다.</p>
+        <p>이 균열을 메우려면 새로운 장치가 필요합니다 - 온체인 모니터링, 사전적 화이트리스트, 토큰 동결 기능을 갖춘 스테이블코인의 선별 채택, 사고 시 보험 또는 보상 적립금 등. 이는 단순한 시스템 추가가 아니라 <em>영업 모델의 재설계</em>입니다.</p>
+
+        <h3>4. 가치 보증이 외주화됩니다</h3>
+        <p>USDC 1토큰이 1달러로 표시되는 이유는 <em>Circle이 그렇게 약속했기 때문</em>이지 은행이 보증해서가 아닙니다. CBDC라면 발행 중앙은행이 보증합니다. 토큰화 예금이라면 발행 은행이 보증합니다. 어느 경우든 은행 앱은 자신이 보증하지 않는 가치를 자기 화면에 처음으로 표시하게 됩니다.</p>
+        <p>이는 <em>신뢰의 전이(trust transfer)</em>입니다. 지금까지는 고객이 "내 돈은 안전한가"라고 물으면 은행이 답할 수 있었습니다. 앞으로는 토큰 발행자, 준비자산 운용자, 블록체인 네트워크, 스마트컨트랙트 감사기관 등 <em>복수의 신뢰 주체</em>를 거쳐야 답할 수 있습니다.</p>
+        <p>은행은 이제 <em>신뢰의 단일 보증자</em>가 아니라 <em>복수 신뢰체계의 통합 게이트웨이</em>가 되어야 합니다. 어떤 발행자의 어떤 토큰을 자기 화면에 표시할지, 그 신뢰성을 어떻게 평가하고 모니터링할지, 발행자 디페그(de-peg) 사고가 발생했을 때 고객에게 어떤 책임을 질지 - 이것이 새로운 핵심 역량입니다.</p>
+        <p>이를 위해서는 전통적 신용평가 인프라가 <em>발행자 신용평가(issuer credit assessment)</em> 영역으로 확장되어야 합니다. 무디스나 S&amp;P가 채권 발행자를 평가하듯, 은행은 자기 앱에 올라오는 모든 토큰 발행자를 평가하는 내부 체계를 갖춰야 합니다. 이는 외부 의존만으로는 해결되지 않는, 은행 고유의 새로운 리스크 인프라입니다.</p>
+      </section>
+
+      <section id="part-2">
+        <div class="section-label">Part II</div>
+        <h2>II. 무엇이 새로 등장하는가 - 균열에서 솟아나는 다섯 가지 사실</h2>
+        <h3>5. 신용창출 메커니즘에 균열이 생깁니다</h3>
+        <p>은행의 가장 큰 사회적 기능은 <em>예금을 받아 대출로 신용을 창출하는 것</em>입니다. 100원을 예금받아 90원을 대출하면, 그 90원이 다시 어딘가의 예금이 되고, 다시 81원이 대출되며 - 이 과정을 통해 통화승수가 작동하고 실물경제에 신용이 공급됩니다.</p>
+        <p>스테이블코인이 예금을 흡수하면 어떻게 될까요. 고객이 100만 원을 예금에서 빼서 USDC로 옮기면, 그 자금은 Circle이 보유한 단기 미국채와 일부 은행 예금에 머뭅니다. 그러나 <em>원래 고객의 거래 은행</em>이 그 자금에 접근해 신용을 창출하던 통로는 끊깁니다. 지역은행, 중소기업 대출 비중이 높은 은행일수록 영향이 큽니다.</p>
+        <p>CBDC도 마찬가지입니다. 한국은행이 직접 발행하는 디지털 원화에 시중은행 예금이 흡수되면, 시중은행의 자금조달 비용은 오르고 신용공급은 위축됩니다. 이른바 <em>예금기반 잠식(deposit base erosion)</em> 또는 <em>은행 디스인터미디에이션</em> 우려입니다.</p>
+        <p>BIS, IMF, 한국은행 모두 이 문제를 인식하고 <em>2단계 모델(two-tier model)</em> - 중앙은행이 발행하되 시중은행이 유통과 고객접점을 담당 - 을 기본 설계로 삼고 있습니다. 그러나 이것이 <em>완전한 해결책이 아닌 완충 장치</em>임을 알아야 합니다. 결국 자금은 어디론가 흐르고, 그 흐름이 전통 은행의 자금조달 구조와 순이자마진(NIM)에 미치는 영향은 장기적으로 지대합니다.</p>
+
+        <h3>6. 국경이 사라집니다 - 통화주권과 자본이동의 재정의</h3>
+        <p>전통 은행 송금은 SWIFT, 환거래은행망, 외국환거래법, 자본거래신고 의무라는 다층의 게이트를 통과해야 했습니다. 스테이블코인 송금에는 이 게이트가 작동하지 않습니다. 지갑 주소만 알면 24시간, 수수료 몇 달러, 분 단위로 국경을 넘습니다.</p>
+        <p>이는 단순한 편의성 향상이 아니라 <em>통화주권의 침식</em>입니다. 신흥국에서는 이미 자국 통화 가치 하락기에 USDC, USDT가 사실상의 <em>디지털 달러화(digital dollarization)</em>를 가속화하고 있습니다. 한국 같은 중간 규모 개방경제에서도, 외환위기나 급격한 자본유출 상황에서 스테이블코인이 새로운 <em>우회 경로</em>가 될 가능성이 있습니다.</p>
+        <p>이 흐름은 두 개의 정책 긴장을 만듭니다. 하나는 <em>외국환거래법과 가상자산이용자보호법의 충돌</em> - 같은 자금 이동이 어느 법의 규율을 받는가입니다. 다른 하나는 <em>AML/CFT 효과성의 역설</em> - 분산원장의 투명성이 오히려 트래블룰(travel rule) 등 추적 인프라를 더 정밀하게 만들 수도 있다는 점입니다.</p>
+        <p>iM뱅크처럼 무역금융, 외환업무, 기업금융을 다루는 은행은 이 영역에서 새로운 서비스 기회와 규제 위험을 동시에 마주합니다. 특히 한국 정부가 원화 스테이블코인 정책을 본격화할 경우, <em>외환·국제결제 분야에서 시중은행의 역할 재편</em>이 가장 빠르게 일어날 가능성이 높습니다.</p>
+
+        <h3>7. 화폐가 프로그램 가능해집니다</h3>
+        <p>전통적 화폐는 무조건적입니다. 1만 원짜리 지폐는 그것을 가진 사람의 어떤 사용에도 동일하게 작동합니다. 토큰은 다릅니다. 스마트컨트랙트와 결합되면, 화폐 자체가 조건을 갖습니다 - <em>언제, 누구에게, 무엇을 위해서만 사용 가능한 돈</em>이 가능해집니다.</p>
+        <p>이는 두 방향으로 작동합니다. 산업적으로는 무역금융, 신탁, 에스크로, 정부 재난지원금, 보조금, 바우처, 마일리지 등 무수한 응용 가능성을 엽니다. 정치사회적으로는 <em>돈에 의한 행동 통제</em>라는 디스토피아적 시나리오를 엽니다 - 정부가 사용처와 시한을 지정한 화폐, 기업이 직원의 사용처를 통제하는 임금, 부모가 자녀의 소비를 제한하는 용돈 등입니다.</p>
+        <p class="highlight">화폐가 코드가 되는 순간 은행은 코드를 다루는 기관이 됩니다.</p>
+        <p>여기서 인식해야 할 핵심은, <strong>화폐가 코드가 되는 순간 은행은 코드를 다루는 기관이 된다</strong>는 점입니다. 스마트컨트랙트 감사 역량, 코드 리스크 평가, 프로그램 가능한 상품의 컴플라이언스 검증 - 이는 전통 은행의 인재 풀과 조직구조가 갖추지 않은 역량입니다. 핀테크와 IT 인력을 조직 깊숙이 들이고, 의사결정 구조에 코드 이해도를 가진 인사를 배치하는 <em>조직의 디지털 재편</em>이 동반되어야 합니다.</p>
+
+        <h3>8. 프라이버시의 역설이 나타납니다</h3>
+        <p>전통 계좌는 폐쇄적입니다. 은행만이 거래 내역을 보고, 금융실명제와 개인정보보호법, 신용정보법이 그 보호 체계를 만듭니다.</p>
+        <p>지갑의 세상은 정반대입니다. 퍼블릭 블록체인의 거래 내역은 본질적으로 공개정보입니다. 누구나 볼 수 있고, 분석할 수 있으며, 영구히 지워지지 않습니다. <em>개인정보의 영구적 공개성</em>이라는 새로운 프라이버시 환경이 같은 앱 안에 공존합니다.</p>
+        <p>CBDC는 이 스펙트럼의 또 다른 끝점입니다. 중앙은행이 모든 거래를 잠재적으로 추적할 수 있는 구조는, 효과적인 자금세탁방지를 가능하게 하는 동시에 <em>국가 감시 자본주의</em>의 우려를 낳습니다. 유럽중앙은행(ECB)의 디지털 유로 설계는 이 문제를 깊이 다루며, 일정 금액 이하 익명성, 영지식증명(zero-knowledge proof) 기반 프라이버시 보존 등 다양한 절충안을 모색하고 있습니다.</p>
+        <p>자문해야 할 질문은 <em>우리는 고객에게 어떤 프라이버시 약속을 할 수 있는가</em>입니다. 같은 고객, 같은 앱이지만 한 화면(계좌)에서는 신용정보법이, 다른 화면(지갑)에서는 가상자산이용자보호법과 블록체인 자체의 공개성이 작동합니다. 고객에게 이 차이를 어떻게 설명하고 어떤 보호를 제공할 것인가는 <em>법적 의무를 넘어 윤리적 책임</em>의 영역입니다.</p>
+
+        <h3>9. 지급결제와 청산 인프라가 재편됩니다</h3>
+        <p>지난 50년간 한국의 지급결제 인프라는 한국은행 BOK-Wire+, 금융결제원, 카드망, 증권결제망 등 정교한 다층 구조 위에서 작동해왔습니다. 이 구조의 핵심은 <em>시점 분리</em>입니다 - 거래는 즉시 일어나지만, 결제(settlement)는 일정 시간 후 차감결제(net settlement) 또는 총액결제(gross settlement)로 마무리됩니다.</p>
+        <p>토큰화된 화폐와 자산은 이 구조를 <em>원자적 결제(atomic settlement)</em>로 바꿉니다. 거래와 결제가 같은 트랜잭션에서 동시에 일어납니다. 증권과 자금이 동시에 교환되는 <em>DvP(Delivery vs Payment)</em>가 진정한 의미에서 실현됩니다.</p>
+        <p>이는 자본 효율성을 극적으로 높이지만, 동시에 <em>유동성 관리 구조</em>를 근본부터 재편합니다. 차감결제 시점까지 활용 가능했던 일중 유동성(intraday liquidity)이 사라지고, 모든 거래가 즉시 자금 가용성을 요구합니다. BIS의 <em>통합원장(unified ledger)</em> 비전, mBridge·Project Agora 같은 국제 협력 프로젝트들은 이 새로운 결제 패러다임을 설계하는 작업입니다.</p>
+        <p>은행 재무팀과 자금시장팀의 일하는 방식이 근본적으로 바뀐다는 의미입니다. 이를 단순한 IT 프로젝트가 아니라 <em>은행 자금흐름 구조의 재설계</em>로 인식해야 합니다. 특히 도매CBDC(wholesale CBDC)가 본격화되면, 은행 간 결제 시장의 경쟁 구조와 마진 구조가 바뀝니다.</p>
+      </section>
+
+      <section id="part-3">
+        <div class="section-label">Part III</div>
+        <h2>III. 새로운 분류학과 인식의 프레임</h2>
+        <h3>10. 새로운 경쟁자 지형</h3>
+        <p>전통 은행의 경쟁자는 다른 은행이었습니다. 핀테크 시대에는 카카오·토스·네이버페이가 더해졌습니다. 디지털 자산 시대의 경쟁 지형은 한 단계 더 복잡해집니다.</p>
+        <p>스테이블코인 발행자(Circle, Tether, PayPal), 토큰화 자산 플랫폼(BlackRock의 BUIDL, Franklin Templeton의 BENJI), 디지털 자산 수탁기관(Coinbase Custody, Fidelity Digital Assets, Anchorage), 결제 네트워크(Visa·Mastercard의 스테이블코인 정산 통합), 빅테크의 디지털 지갑(Apple Wallet, Google Wallet의 토큰 지원 확장) - 이 모두가 <em>예금자에게 직접 닿을 수 있는 경로</em>를 갖기 시작합니다.</p>
+        <p>특히 주목할 흐름은 <em>비은행 발행자의 사실상의 은행화</em>입니다. Circle은 USDC 준비자산으로 단기 미국채를 운용하며 사실상 <em>내로우 뱅크(narrow bank)</em> 모델을 구현합니다. PayPal의 PYUSD, Visa의 토큰 정산은 결제망 자체에 화폐 발행 기능을 통합합니다. 이들은 은행 라이선스 없이도 화폐 발행과 유통의 핵심을 점유합니다.</p>
+        <p>한국 시장에서도 KDX 같은 분산형 컨소시엄, 카카오·네이버 진영의 토큰 사업 진출, 가상자산사업자(VASP)의 영역 확장 등이 비슷한 패턴을 만듭니다. <em>경쟁이 더 이상 동일 산업 내부에서 일어나지 않는다</em>는 사실을 받아들여야 합니다.</p>
+
+        <h3>11. CBDC, 스테이블코인, 토큰화 예금 - 화폐 분류학을 정확히 구별해야 합니다</h3>
+        <p>자주 혼동되지만, 이 셋은 본질적으로 다른 화폐입니다. 이 차이를 <em>기능적으로</em>가 아니라 <em>제도적으로</em> 이해해야 합니다.</p>
+        <p><strong>CBDC</strong>는 중앙은행의 부채입니다. 따라서 신용리스크가 없고, 가치 보증의 궁극적 책임 주체가 중앙은행입니다. 통화정책, 지급결제 안정성, 통화주권의 도구로 설계됩니다. 한국은행은 이미 모의실험을 거쳐 도매CBDC 중심의 단계적 도입을 검토하고 있습니다.</p>
+        <p><strong>스테이블코인</strong>은 민간 발행자의 부채 또는 준비자산 보유자에 대한 청구권입니다. 발행자 신용리스크, 준비자산 운용리스크, 페그 안정성 리스크가 존재합니다. 시장 자율과 혁신의 영역이지만, 동시에 <em>사적으로 발행되는 화폐 유사물</em>이라는 역사적으로 위험한 카테고리에 속합니다(19세기 미국 자유은행 시대의 교훈을 떠올려 볼 일입니다).</p>
+        <p><strong>토큰화 예금(tokenized deposit)</strong>은 양자 사이의 중간지대입니다. 시중은행의 예금을 토큰 형태로 발행한 것으로, 발행 은행의 부채라는 점에서는 전통 예금과 같지만 블록체인 위에서 움직인다는 점에서는 토큰의 특성을 갖습니다. JPMorgan의 JPM Coin, 싱가포르 Project Guardian의 다양한 시범사업이 이 모델을 구현합니다.</p>
+        <p>각 형태는 서로 다른 규제, 회계, 리스크, 비즈니스 모델을 요구합니다. <em>세 가지가 모두 디지털 화폐다</em>라고 뭉뚱그려 말하는 순간, 가장 중요한 차이가 보이지 않게 됩니다.</p>
+        <p>iM뱅크처럼 시중은행 입장에서는 토큰화 예금이 가장 자연스러운 진입로입니다. 자기 부채를 자기 토큰으로 발행하는 것이므로, 회계와 리스크 관리에서 기존 체계와 가장 적게 충돌합니다. 동시에 외부 스테이블코인을 <em>수탁 및 표시</em>하는 역할도 병행해야 합니다. <strong>두 트랙을 동시에 가는 이중 전략</strong>이 현실적입니다.</p>
+
+        <h3>12. 우리 자신의 인식 프레임 - 다섯 개의 전환</h3>
+        <p>지금까지 11가지 항목은 모두 외부적 변화에 관한 것이었습니다. 마지막은 내부적 변화 - 우리 자신의 인식 프레임입니다.</p>
+        <p><strong>첫째, 기능 추가가 아니라 정체성 재정의의 문제입니다.</strong> "지갑 기능을 우리 앱에 붙이자"는 접근으로는 결국 위에 적은 균열들이 사고의 형태로 터져나옵니다. 차라리 처음부터 "우리 은행은 어떤 기록자에서 어떤 통합자로 이동하는가"를 묻는 편이 빠릅니다.</p>
+        <p><strong>둘째, 불연속성을 인정해야 합니다.</strong> 디지털 자산은 기존 은행업의 자연스러운 확장이 아닙니다. 회계, 법, 리스크, 신뢰, 인재, 조직 구조 모든 면에서 <em>기존 틀을 깨지 않으면 받아들일 수 없는</em> 변화입니다. 점진적 진화의 비유는 위험합니다.</p>
+        <p><strong>셋째, 상충하는 두 시간축을 동시에 살아야 합니다.</strong> 전통 은행 업무의 안정성과 규제 준수는 단기적으로 흐트러질 수 없습니다. 동시에 디지털 자산 시대의 새 역량은 빠르게 갖춰야 합니다. 하나의 조직 안에 <em>수백 년의 시간</em>과 <em>몇 년의 시간</em>이 공존합니다. 이는 조직 설계의 문제이자 의사결정 속도의 문제입니다.</p>
+        <p><strong>넷째, 인재 구성의 스펙트럼을 넓혀야 합니다.</strong> 전통 은행 경력은 영업, 여신, 자금, 리스크, 컴플라이언스로 짜여 있습니다. 디지털 자산 시대에는 여기에 <em>암호학, 분산시스템, 토큰 경제학, 스마트컨트랙트 감사, 디지털 신원</em> 등의 영역에 대한 이해도가 의사결정 그룹의 평균에 들어와야 합니다. 이를 외부 위탁이나 컨설턴트에 의존하면 결정의 속도가 따라가지 못합니다.</p>
+        <p><strong>다섯째, 문화의 변화를 동반해야 합니다.</strong> 은행 문화는 본질적으로 보수적이고 위계적입니다. 디지털 자산 시대의 의사결정은 빠르고 수평적이며 실험적입니다. 두 문화를 <em>분리된 별도 조직</em>으로 두는 모델(예: 디지털 자회사)도 있고, <em>기존 조직 안에 이식하는</em> 모델도 있습니다. 어느 쪽이든 의식적인 개입과 보호 없이는 새 문화가 살아남지 못합니다.</p>
+      </section>
+
+      <section id="conclusion">
+        <div class="section-label">Conclusion</div>
+        <h2>결론 - 다시 정의되는 은행</h2>
+        <p>지난 5세기 동안 은행은 <em>기록을 독점적으로 쓰는 기관</em>이었습니다. 메디치 가문에서 현대 시중은행에 이르기까지, <em>기록할 권한</em>과 <em>그 기록을 보증할 책임</em>은 한 번도 분리된 적이 없었습니다.</p>
+        <p>스테이블코인과 CBDC가 만드는 변화의 본질은, 이 두 가지가 분리되기 시작한다는 데 있습니다. 은행은 이제 자신이 <em>기록하지 않은 것</em>에 대해 <em>보여주고 보호하는</em> 책임을 집니다. <em>기록자(recorder)</em>에서 <em>통합자(integrator)</em>로, <em>단일 보증자</em>에서 <em>복수 신뢰체계의 게이트웨이</em>로 이동합니다. 이 이동은 은행의 종말이 아니라 <strong>재정의</strong>입니다.</p>
+        <p>'두 개의 세상, 계좌 그리고 지갑'이라는 표현은 따라서 단순한 UI 비유가 아닙니다. 그것은 약속의 화폐와 사물의 화폐가 처음으로 같은 표면 위에 나란히 놓이는 사건의 이름이며, 동시에 은행이 자기 정체성의 어느 부분을 지키고 어느 부분을 새로 만들어야 하는지를 묻는 질문의 이름입니다.</p>
+        <p>전통 은행의 가장 큰 자산은 <em>수백 년에 걸쳐 축적된 신뢰</em>입니다. 그 신뢰는 디지털 자산 시대에도 여전히 결정적 경쟁력입니다. 다만 그것이 작동하는 방식이 바뀝니다 - <em>내가 보증한다</em>에서 <strong>내가 보증할 수 있는 것을 정확히 골라 보여주고, 내가 보증할 수 없는 것에 대해서는 그 사실 자체를 정직하게 표시한다</strong>로. 이 미묘하지만 결정적인 전환을 먼저 자기 언어로 이해하는 곳에서, 다음 시대의 은행이 시작됩니다.</p>
+        <p>고객은 머지않아 자기 은행 앱을 열고 두 개의 세상을 동시에 마주하게 될 것입니다. 그 화면을 설계하는 사람들은, 그것이 단지 두 개의 탭이 아니라 <em>두 개의 화폐 존재론</em>이 처음으로 한자리에 만나는 자리임을 알고 있어야 합니다.</p>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-brand">
+          <img class="im-logo" src="mon4pctv-imbank-logo-h-en.jpg.jpg" alt="iM뱅크">
+          <span>For iM뱅크 임직원</span>
+        </div>
+        이 페이지는 모바일 독해를 위해 원문의 구조를 유지하고, 글자 크기·진행률·읽은 위치 저장만 더했습니다.
+        <div class="signature">황원철 씀</div>
+      </footer>
+    </article>
+  </main>
+
+  <div class="resume-toast" id="toast" role="status">읽던 위치에서 다시 시작했습니다</div>
+
+  <script>
+    const STORAGE_KEY = "two-worlds-reader";
+    const progressBar = document.getElementById("progressBar");
+    const toast = document.getElementById("toast");
+    const root = document.documentElement;
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+
+    function applySize(size) {
+      const next = Math.min(22, Math.max(16, size));
+      root.style.setProperty("--reader-size", `${next}px`);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savedState(), size: next }));
+    }
+
+    function savedState() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    }
+
+    function updateProgress() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max <= 0 ? 0 : Math.min(100, Math.max(0, (window.scrollY / max) * 100));
+      progressBar.style.width = `${pct}%`;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...savedState(), y: window.scrollY }));
+    }
+
+    document.getElementById("increase").addEventListener("click", () => {
+      const current = parseFloat(getComputedStyle(root).getPropertyValue("--reader-size"));
+      applySize(current + 1);
+    });
+
+    document.getElementById("decrease").addEventListener("click", () => {
+      const current = parseFloat(getComputedStyle(root).getPropertyValue("--reader-size"));
+      applySize(current - 1);
+    });
+
+    document.getElementById("top").addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("load", () => {
+      if (saved.size) applySize(saved.size);
+      if (saved.y && saved.y > 160) {
+        setTimeout(() => {
+          window.scrollTo(0, saved.y);
+          toast.classList.add("show");
+          setTimeout(() => toast.classList.remove("show"), 1800);
+          updateProgress();
+        }, 60);
+      } else {
+        updateProgress();
+      }
+    });
+  </script>
+</body>
+</html>
